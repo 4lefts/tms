@@ -25,6 +25,8 @@ new p5(function(p){
 		offset = 0, //the current offset for the sequence track (in array places)
 		counters = [0, 0] //place in tm sequence
 
+	var slider
+
 	p.setup = function(){
 
 		//get the parent div for the canvas
@@ -42,10 +44,12 @@ new p5(function(p){
 
 		synths[0] = new p.Pling()
 		synths[1] = new p.Pling()
-	
-		tms = thue_morse.compute(8)
+
+		tms = thue_morse.compute(6)
 		tmsText = tms.join(' ')
 		sixteenth = tempoCalc.calc(framerate, tempo, 16) //calc frames per 16th
+
+		slider = new p.Slider(0, p.height - 21, p.width - 1, 20, 36, 72)
 
 		//initialise motif, hzs and counters
 		p.initNotes()
@@ -60,8 +64,10 @@ new p5(function(p){
 
 		//bind listener functions to clicking on this canvas element
 		//e.g. - canvas.mousePressed(p.somefunction)
-		//lots more listed at http://p5js.org/reference/#/p5.Element/touchEnded
+		//lots more listed at http://p5js.org/reference/#/p5.Element
 		canvas.mousePressed(p.play)
+		// canvas.mouseReleased(p.sliderUnEdit)
+		//canvas.touchMoved(p.sliderCheck)
 	}
 
 	//responsively resize canvas if window is resized
@@ -73,32 +79,11 @@ new p5(function(p){
 	p.draw = function(){
 		if(isPlaying){
 			if(p.frameCount % sixteenth == 0){ //each sixteenth note
-			
-				var dispText = p.buildDispText()
-				var noteText = p.buildNoteText()
-
-				p.background(0)
-				p.drawText(dispText, 16, 180, p.LEFT, 0, 10, p.width, p.height)
-
-				p.drawText(noteText, 72, 200, p.CENTER, 0, p.height * 0.75, p.width, 72)				
-				// p.textAlign(p.CENTER)
-				// p.textSize(72)
-				// p.text(noteText, 10, p.height/2, p.width, 72)
-			
+				//play sounds		
 				for(var i = 0; i < counters.length; i++){
 					if(tms[counters[i]] == 1){
 						//play note
-						synths[i].trigger(hzs[note], 0.4, (i * 2) - 1)
-						//draw
-						// p.noStroke()
-						// p.fill(255, 200)
-						// p.beginShape()
-						// p.vertex(p.width/2, p.height/2)
-						// p.vertex(p.width * i, motif[note] * 30) //30 = 360/8
-						// p.vertex(p.width * i, (motif[note] * 30) + 30)
-						// // p.vertex(p.random(i * (p.width/2), (i * (p.width/2)) + p.width/2), p.random(0, p.height))
-						// p.endShape(p.CLOSE)
-						// // p.line(p.width/2, p.height/2, p.random(0, p.width), p.random(0, p.height))
+						synths[i].trigger(hzs[note], 0.7, (i * 2) - 1)
 					}
 				}
 				note = (note + 1) % hzs.length
@@ -109,22 +94,77 @@ new p5(function(p){
 					offset = (offset + 1) % tms.length
 					counters[1] = offset
 				}
+				//do drawing:
+				//get wave arrays from synths for visualisation
+				var waves = synths.map(function(elem){
+					return elem.waveform()
+				})
+
+				//get text strings for visualisation
+				var dispText = p.buildDispText()
+				var noteText = p.buildNoteText()
+
+				p.background(0)
+
+				//draw waveforms (from 2d array)
+				for(var i = 0; i < waves.length; i++){
+					p.push()
+					p.noFill()
+					p.beginShape()
+					p.noFill()
+					p.stroke(255)
+					for(var j = 0; j < waves[i].length; j++){
+						var x = (p.map(j, 0, waves[i].length, 0, p.width/2)) + p.width/2 * i
+						var y = p.map(waves[i][j], -1, 1, 0, p.height)
+						p.vertex(x, y)
+					}
+					p.endShape()
+					p.pop()
+				}
+
+				p.drawText(dispText, 16, 180, p.LEFT, 0, 10, p.width, p.height)
+				p.drawText(noteText, 72, 200, p.CENTER, 0, p.height * 0.667, p.width, 72)
+
+				slider.render()
 			}
 		} else {
+			//just draw black if not playing
 			p.background(0)
+			slider.render()
 		}
-
+		if(slider.isEditing){
+			root = slider.update()
+			hzs = p.makeHz(motif, root)
+		}				
 	}
 
 	p.play = function(){
 		//re-randomise notes and counters when sequncer stops
-		if(isPlaying){
-			p.initNotes()
+		console.log('hello play')
+		if(p.mouseY < p.height - slider.h){
+			if(isPlaying){
+				p.initNotes()
+			}
+			isPlaying = !isPlaying
 		}
-		isPlaying = !isPlaying
 	}
 
+	p.mouseReleased = function(){
+		console.log('hello unedit')
+		slider.isEditing = false
+	}
+
+	p.mouseDragged = function(){
+		if(p.mouseX > slider.x && p.mouseX < slider.x + slider.w){
+			if(p.mouseY > slider.y && p.mouseY < slider.y + slider.h){
+				slider.isEditing = true
+			}
+		} 
+	}
+
+	//----------
 	//synthesizer
+	//----------
 	p.Pling = function(){
 
 		this.env = new p5.Env()	
@@ -138,6 +178,8 @@ new p5(function(p){
 		this.del = new p5.Delay()
 		this.del.process(this.osc, 0.200, 0.3, 5000)
 
+		this.fft = new p5.FFT(0.9, 512)
+
 		/*arguments are:
 		freq (hz),
 		amplitude,
@@ -147,6 +189,43 @@ new p5(function(p){
 			this.osc.pan(p)
 			this.env.setRange(a, 0)
 			this.env.play(this.osc)
+		}
+
+		this.waveform = function(){
+			return this.fft.waveform()
+		}
+	}
+
+	p.Slider = function(_x, _y, _w, _h, _min, _max){
+		this.x = _x
+		this.y = _y
+		this.w = _w
+		this.h = _h
+		this.min = _min
+		this.max = _max
+		this.val = this.min
+		this.isEditing = false
+
+		this.update = function(){
+			this.val = p.map(p.mouseX, this.x, this.x + this.w, this.min, this.max)
+			return this.val
+		}
+
+		this.render = function(){
+			p.push()
+			p.translate(this.x, this.y)
+			p.noFill()
+			p.stroke(255, 130, 0)
+			p.rect(0, 0, this.w, this.h)
+			p.noStroke()
+			p.fill(255, 130, 0)
+			p.rect(2, 2, p.map(this.val, this.min, this.max, 0, this.w - 4), this.h - 3)
+			p.noStroke()
+			p.fill(255)
+			p.textSize(12)
+			var label = 'root midi note: ' + String(Math.floor(this.val))
+			p.text(label, 5, this.h - 5)
+			p.pop()
 		}
 	}
 
