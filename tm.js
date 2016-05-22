@@ -8,7 +8,7 @@ new p5(function(p){
 	var tmsText = '' //the thue-morse sequence as a string
 
 	//note variables
-	var root = 72 //A4, 440hz
+	var root = 36 //A4, 440hz
 	var scale = [0, 2, 3, 5, 7, 8, 10, 12]
 	var motif = [] // the notes of a riff
 	var weighting = [6, 1, 3, 1, 4, 1, 2, 4] //array to hold the chance of choosing each note for the motif
@@ -43,7 +43,7 @@ new p5(function(p){
 		synths[0] = new p.Pling()
 		synths[1] = new p.Pling()
 	
-		tms = thue_morse.compute(6)
+		tms = thue_morse.compute(8)
 		tmsText = tms.join(' ')
 		sixteenth = tempoCalc.calc(framerate, tempo, 16) //calc frames per 16th
 
@@ -73,25 +73,32 @@ new p5(function(p){
 	p.draw = function(){
 		if(isPlaying){
 			if(p.frameCount % sixteenth == 0){ //each sixteenth note
+			
+				var dispText = p.buildDispText()
+				var noteText = p.buildNoteText()
+
 				p.background(0)
-				p.noStroke()
-				p.fill(255)
-				var displayText = tmsText + '\ncounter 0: ' + counters[0] + '\ncounter 1: ' + counters[1]
-				p.text(displayText, 10, 0, p.width, p.height)
+				p.drawText(dispText, 16, 180, p.LEFT, 0, 10, p.width, p.height)
+
+				p.drawText(noteText, 72, 200, p.CENTER, 0, p.height * 0.75, p.width, 72)				
+				// p.textAlign(p.CENTER)
+				// p.textSize(72)
+				// p.text(noteText, 10, p.height/2, p.width, 72)
+			
 				for(var i = 0; i < counters.length; i++){
 					if(tms[counters[i]] == 1){
 						//play note
 						synths[i].trigger(hzs[note], 0.4, (i * 2) - 1)
 						//draw
-						p.noStroke()
-						p.fill(255, 200)
-						p.beginShape()
-						p.vertex(p.width/2, p.height/2)
-						p.vertex(p.width * i, motif[note] * 30) //30 = 360/8
-						p.vertex(p.width * i, (motif[note] * 30) + 30)
-						// p.vertex(p.random(i * (p.width/2), (i * (p.width/2)) + p.width/2), p.random(0, p.height))
-						p.endShape(p.CLOSE)
-						// p.line(p.width/2, p.height/2, p.random(0, p.width), p.random(0, p.height))
+						// p.noStroke()
+						// p.fill(255, 200)
+						// p.beginShape()
+						// p.vertex(p.width/2, p.height/2)
+						// p.vertex(p.width * i, motif[note] * 30) //30 = 360/8
+						// p.vertex(p.width * i, (motif[note] * 30) + 30)
+						// // p.vertex(p.random(i * (p.width/2), (i * (p.width/2)) + p.width/2), p.random(0, p.height))
+						// p.endShape(p.CLOSE)
+						// // p.line(p.width/2, p.height/2, p.random(0, p.width), p.random(0, p.height))
 					}
 				}
 				note = (note + 1) % hzs.length
@@ -110,13 +117,14 @@ new p5(function(p){
 	}
 
 	p.play = function(){
-		//re randomise notes and counters when sequncer stops
+		//re-randomise notes and counters when sequncer stops
 		if(isPlaying){
 			p.initNotes()
 		}
 		isPlaying = !isPlaying
 	}
 
+	//synthesizer
 	p.Pling = function(){
 
 		this.env = new p5.Env()	
@@ -141,6 +149,10 @@ new p5(function(p){
 			this.env.play(this.osc)
 		}
 	}
+
+	//------------------------------------------
+	//functions for building arrays of notes etc:
+	//------------------------------------------
 
 	//pick a random item from an array based on an array of weightings
 	p.weightedRand = function(arr, weightArr){
@@ -184,6 +196,37 @@ new p5(function(p){
 		return arr.map(function(){
 			return counterSeed
 		})
+	}
+
+	//---------------------------------------------------
+	//functions for making strings of text for display etc
+	//---------------------------------------------------
+
+	p.buildDispText = function(){
+		var ret = tmsText + '\ncounter 0: ' + counters[0] + '\ncounter 1: ' + counters[1]
+		return ret
+	}
+
+	p.buildNoteText = function(){
+		var ret = p.equalLen(hzs[note] * tms[counters[0]], 6)
+		ret += '\t'
+		ret += p.equalLen(hzs[note] * tms[counters[1]], 6)
+		return ret
+	}
+
+	//hacky helper function to slice strings to equal length for nicer display
+	p.equalLen = function(i, l){
+		return (i + '      ').slice(0, l)
+	}
+
+	p.drawText = function(txt, sz, grey, jst, x, y, w, h){
+		p.push()
+		p.noStroke()
+		p.fill(grey)
+		p.textAlign(jst)
+		p.textSize(sz)
+		p.text(txt, x, y, w, h)//10, 0, p.width, p.height)
+		p.pop()
 	}
 
 }, 'sketchContainer')
