@@ -8,7 +8,7 @@ new p5(function(p){
 	var tmsText = '' //the thue-morse sequence as a string
 
 	//note variables
-	var root = 36 //A4, 440hz
+	var root = 60 //A4, 440hz
 	var scale = [0, 2, 3, 5, 7, 8, 10, 12]
 	var motif = [] // the notes of a riff
 	var weighting = [6, 1, 3, 1, 4, 1, 2, 4] //array to hold the chance of choosing each note for the motif
@@ -49,7 +49,7 @@ new p5(function(p){
 		tmsText = tms.join(' ')
 		sixteenth = tempoCalc.calc(framerate, tempo, 16) //calc frames per 16th
 
-		slider = new p.Slider(0, p.height - 21, p.width - 1, 20, 36, 72)
+		slider = new p.Slider(1, p.height - 42, p.width - 3, 40, 36, 72, root)
 
 		//initialise motif, hzs and counters
 		p.initNotes()
@@ -196,18 +196,18 @@ new p5(function(p){
 		}
 	}
 
-	p.Slider = function(_x, _y, _w, _h, _min, _max){
+	p.Slider = function(_x, _y, _w, _h, _min, _max, _init){
 		this.x = _x
 		this.y = _y
 		this.w = _w
 		this.h = _h
 		this.min = _min
 		this.max = _max
-		this.val = this.min
+		this.val = Math.floor(_init)
 		this.isEditing = false
 
 		this.update = function(){
-			this.val = p.map(p.mouseX, this.x, this.x + this.w, this.min, this.max)
+			this.val = p.constrain(p.map(p.mouseX, this.x, this.x + this.w, this.min, this.max), this.min, this.max)
 			return this.val
 		}
 
@@ -215,10 +215,10 @@ new p5(function(p){
 			p.push()
 			p.translate(this.x, this.y)
 			p.noFill()
-			p.stroke(255, 130, 0)
+			p.stroke(255)
 			p.rect(0, 0, this.w, this.h)
 			p.noStroke()
-			p.fill(255, 130, 0)
+			p.fill(127)
 			p.rect(2, 2, p.map(this.val, this.min, this.max, 0, this.w - 4), this.h - 3)
 			p.noStroke()
 			p.fill(255)
