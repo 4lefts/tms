@@ -1,5 +1,5 @@
 //returns how many frames is one step of sequencer
-
+//not actually used by tms.js, but left in for reference.
 /*
 bpm/60 seconds = beats per second e.g. 120bpm/60 = 2
 framerate/beats per second = frames per beat e.g. 60/2 = 30 frames/beat
